@@ -22,12 +22,9 @@ type ConsumerGroup struct {
 	cg sarama.ConsumerGroup
 }
 
-func NewConsumerGroup(broker string, topics []string, group string, handler ConsumerGroupHandler) (*ConsumerGroup, error) {
+func NewConsumerGroup(broker string, topics []string, group string, handler ConsumerGroupHandler, config *sarama.Config) (*ConsumerGroup, error) {
 	ctx := context.Background()
-	cfg := sarama.NewConfig()
-	cfg.Version = sarama.V0_10_2_0
-	cfg.Consumer.Offsets.Initial = sarama.OffsetOldest
-	client, err := sarama.NewConsumerGroup([]string{broker}, group, cfg)
+	client, err := sarama.NewConsumerGroup([]string{broker}, group, config)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +71,7 @@ func decodeMessage(data []byte) error {
 	return nil
 }
 
-func StartSyncConsumer(broker, topic string) (*ConsumerGroup, error) {
+func StartSyncConsumer(broker, topic string, config *sarama.Config) (*ConsumerGroup, error) {
 	var count int64
 	var start = time.Now()
 	handler := NewSyncConsumerGroupHandler(func(data []byte) error {
@@ -82,19 +79,19 @@ func StartSyncConsumer(broker, topic string) (*ConsumerGroup, error) {
 			return err
 		}
 		count++
-		if count % 5000 == 0 {
-			fmt.Printf("sync consumer consumed %d messages at speed %.2f/s\n", count, float64(count) / time.Since(start).Seconds())
+		if count%5000 == 0 {
+			fmt.Printf("sync consumer consumed %d messages at speed %.2f/s\n", count, float64(count)/time.Since(start).Seconds())
 		}
 		return nil
 	})
-	consumer, err := NewConsumerGroup(broker, []string{topic}, "sync-consumer-" + fmt.Sprintf("%d", time.Now().Unix()), handler)
+	consumer, err := NewConsumerGroup(broker, []string{topic}, "sync-consumer-"+fmt.Sprintf("%d", time.Now().Unix()), handler, config)
 	if err != nil {
 		return nil, err
 	}
 	return consumer, nil
 }
 
-func StartBatchConsumer(broker, topic string) (*ConsumerGroup, error) {
+func StartBatchConsumer(broker, topic string, config *sarama.Config) (*ConsumerGroup, error) {
 	var count int64
 	var start = time.Now()
 	handler := NewBatchConsumerGroupHandler(&BatchConsumerConfig{
@@ -106,20 +103,20 @@ func StartBatchConsumer(broker, topic string) (*ConsumerGroup, error) {
 				}
 			}
 			count += int64(len(messages))
-			if count % 5000 == 0 {
-				fmt.Printf("batch consumer consumed %d messages at speed %.2f/s\n", count, float64(count) / time.Since(start).Seconds())
+			if count%5000 == 0 {
+				fmt.Printf("batch consumer consumed %d messages at speed %.2f/s\n", count, float64(count)/time.Since(start).Seconds())
 			}
 			return nil
 		},
 	})
-	consumer, err := NewConsumerGroup(broker, []string{topic}, "batch-consumer-" + fmt.Sprintf("%d", time.Now().Unix()), handler)
+	consumer, err := NewConsumerGroup(broker, []string{topic}, "batch-consumer-"+fmt.Sprintf("%d", time.Now().Unix()), handler, config)
 	if err != nil {
 		return nil, err
 	}
 	return consumer, nil
 }
 
-func StartMultiAsyncConsumer(broker, topic string) (*ConsumerGroup, error) {
+func StartMultiAsyncConsumer(broker, topic string, config *sarama.Config) (*ConsumerGroup, error) {
 	var count int64
 	var start = time.Now()
 	var bufChan = make(chan *ConsumerSessionMessage, 1000)
@@ -130,8 +127,8 @@ func StartMultiAsyncConsumer(broker, topic string) (*ConsumerGroup, error) {
 					message.Session.MarkMessage(message.Message, "")
 				}
 				cur := atomic.AddInt64(&count, 1)
-				if cur % 5000 == 0 {
-					fmt.Printf("multi async consumer consumed %d messages at speed %.2f/s\n", cur, float64(cur) / time.Since(start).Seconds())
+				if cur%5000 == 0 {
+					fmt.Printf("multi async consumer consumed %d messages at speed %.2f/s\n", cur, float64(cur)/time.Since(start).Seconds())
 				}
 			}
 		}()
@@ -139,14 +136,14 @@ func StartMultiAsyncConsumer(broker, topic string) (*ConsumerGroup, error) {
 	handler := NewMultiAsyncConsumerGroupHandler(&MultiAsyncConsumerConfig{
 		BufChan: bufChan,
 	})
-	consumer, err := NewConsumerGroup(broker, []string{topic}, "multi-async-consumer-" + fmt.Sprintf("%d", time.Now().Unix()), handler)
+	consumer, err := NewConsumerGroup(broker, []string{topic}, "multi-async-consumer-"+fmt.Sprintf("%d", time.Now().Unix()), handler, config)
 	if err != nil {
 		return nil, err
 	}
 	return consumer, nil
 }
 
-func StartMultiBatchConsumer(broker, topic string) (*ConsumerGroup, error) {
+func StartMultiBatchConsumer(broker, topic string, config *sarama.Config) (*ConsumerGroup, error) {
 	var count int64
 	var start = time.Now()
 	var bufChan = make(chan batchMessages, 1000)
@@ -159,17 +156,17 @@ func StartMultiBatchConsumer(broker, topic string) (*ConsumerGroup, error) {
 					}
 				}
 				cur := atomic.AddInt64(&count, int64(len(messages)))
-				if cur % 1000 == 0 {
-					fmt.Printf("multi batch consumer consumed %d messages at speed %.2f/s\n", cur, float64(cur) / time.Since(start).Seconds())
+				if cur%1000 == 0 {
+					fmt.Printf("multi batch consumer consumed %d messages at speed %.2f/s\n", cur, float64(cur)/time.Since(start).Seconds())
 				}
 			}
 		}()
 	}
 	handler := NewMultiBatchConsumerGroupHandler(&MultiBatchConsumerConfig{
 		MaxBufSize: 1000,
-		BufChan: bufChan,
+		BufChan:    bufChan,
 	})
-	consumer, err := NewConsumerGroup(broker, []string{topic}, "multi-batch-consumer-" + fmt.Sprintf("%d", time.Now().Unix()), handler)
+	consumer, err := NewConsumerGroup(broker, []string{topic}, "multi-batch-consumer-"+fmt.Sprintf("%d", time.Now().Unix()), handler, config)
 	if err != nil {
 		return nil, err
 	}

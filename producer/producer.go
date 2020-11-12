@@ -9,16 +9,16 @@ import (
 )
 
 type Producer struct {
-	p     sarama.AsyncProducer
+	p sarama.AsyncProducer
 }
 
-func NewProducer(broker string) (*Producer, error) {
-	producer, err := sarama.NewAsyncProducer([]string{broker}, sarama.NewConfig())
+func NewProducer(broker string, config *sarama.Config) (*Producer, error) {
+	producer, err := sarama.NewAsyncProducer([]string{broker}, config)
 	if err != nil {
 		return nil, err
 	}
 	return &Producer{
-		p:     producer,
+		p: producer,
 	}, nil
 }
 
@@ -41,8 +41,8 @@ func (p *Producer) StartProduce(done chan struct{}, topic string) {
 			Topic: topic,
 			Value: sarama.ByteEncoder(msgBytes),
 		}:
-			if i % 5000 == 0 {
-				fmt.Printf("produced %d messages with speed %.2f/s\n", i, float64(i) / time.Since(start).Seconds())
+			if i%5000 == 0 {
+				fmt.Printf("produced %d messages with speed %.2f/s\n", i, float64(i)/time.Since(start).Seconds())
 			}
 		case err := <-p.p.Errors():
 			fmt.Printf("Failed to send message to kafka, err: %s, msg: %s\n", err, msgBytes)

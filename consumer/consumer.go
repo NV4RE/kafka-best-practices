@@ -84,7 +84,7 @@ func StartSyncConsumer(broker, topic string, config *sarama.Config) (*ConsumerGr
 		}
 		return nil
 	})
-	consumer, err := NewConsumerGroup(broker, []string{topic}, "sync-consumer-"+fmt.Sprintf("%d", time.Now().Unix()), handler, config)
+	consumer, err := NewConsumerGroup(broker, []string{topic}, "kafka-best-practices-consumer", handler, config)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func StartBatchConsumer(broker, topic string, config *sarama.Config) (*ConsumerG
 			return nil
 		},
 	})
-	consumer, err := NewConsumerGroup(broker, []string{topic}, "batch-consumer-"+fmt.Sprintf("%d", time.Now().Unix()), handler, config)
+	consumer, err := NewConsumerGroup(broker, []string{topic}, "kafka-best-practices-consumer", handler, config)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func StartMultiAsyncConsumer(broker, topic string, config *sarama.Config) (*Cons
 	handler := NewMultiAsyncConsumerGroupHandler(&MultiAsyncConsumerConfig{
 		BufChan: bufChan,
 	})
-	consumer, err := NewConsumerGroup(broker, []string{topic}, "multi-async-consumer-"+fmt.Sprintf("%d", time.Now().Unix()), handler, config)
+	consumer, err := NewConsumerGroup(broker, []string{topic}, "kafka-best-practices-consumer", handler, config)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func StartMultiBatchConsumer(broker, topic string, config *sarama.Config) (*Cons
 		MaxBufSize: 1000,
 		BufChan:    bufChan,
 	})
-	consumer, err := NewConsumerGroup(broker, []string{topic}, "multi-batch-consumer-"+fmt.Sprintf("%d", time.Now().Unix()), handler, config)
+	consumer, err := NewConsumerGroup(broker, []string{topic}, "kafka-best-practices-consumer", handler, config)
 	if err != nil {
 		return nil, err
 	}
